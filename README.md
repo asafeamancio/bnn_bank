@@ -31,12 +31,24 @@ Empresarial | Permite Automações, Notas Fiscais, Boletos | Taxa Mensal Alta, C
 
 ---
 # GitHub Copy/Paste
-- git init
-- git add README.md
-- git commit -m "first commit"
-- git branch -M main
-- git remote add origin https://github.com/asafeamancio/bnn_bank.git
-- git push -u origin main
+> git init
+> git add README.md
+> git commit -m "first commit"
+> git branch -M main
+> git remote add origin https://github.com/asafeamancio/bnn_bank.git
+> git push -u origin main
+>
+> ### GitHub Clonando repositórios e realizando commits
+> git clone 
+> git add .
+> git config --global user.name "Seu Nome"
+> git config --global user.email "seuemail@exemplo.com"
+> git checkout -b nome-da-sua-tarefa
+> git status
+> git add . or git add nome_arquivo
+> git commit -m "o que foi feito"
+> git push -u origin nome-da-sua-tarefa
+> 
 
 ---
 ### Rascunhos
