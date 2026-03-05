@@ -1,0 +1,14 @@
+<meta>
+  <script src="api/s.exports.lua" type="server"/>
+
+  <script src="core/g.config.lua" type="shared" cache="false"/>
+  <script src="core/s.controller.lua" type="server"/>
+  <script src="core/s.database.lua" type="server"/>
+  
+  <script src="modules/s.account.lua" type="server"/>
+  <script src="modules/s.bankConfig.lua" type="server"/>
+  <script src="modules/s.bank.lua" type="server"/>
+  <script src="modules/s.loan.lua" type="server"/>
+  
+  <script src="s.test.lua" type="server"/>
+</meta>
