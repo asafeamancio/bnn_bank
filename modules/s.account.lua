@@ -57,7 +57,7 @@ callback function(success, accountObj|errorMsg)
 Retorno imediato: true, "processando" | false, "erro"
 --]]
 
-local VALID_ACC_TYPES = { corrente = true, poupanca = true, salario = true }
+local VALID_ACC_TYPES = { corrente = true, poupanca = true, salario = true , investimento = true, empresarial = true}
 
 function Account.create(data)
 
@@ -105,10 +105,10 @@ function Account.create(data)
     local accountNumber = generateAccountNumber(data.bank_id)
 
     dbQuery(function(qh)
-        local numRows, _ = dbPoll(qh, 0)
+        local _, numRows, _ = dbPoll(qh, 0)
 
         if not numRows or numRows <= 0 then
-            outputDebugString("[BNN] Account.create: INSERT falhou para player " .. tostring(data.player_id), 1)
+            outputDebugString("[BNN] Account.create: INSERT falhou para player " .. tostring(data.player_id), 1) -- debug
             if data.callback then data.callback(false, "Erro interno ao salvar no banco de dados.") end
             return
         end
@@ -128,7 +128,7 @@ function Account.create(data)
         accountsCache[accountNumber] = newAcc
 
         outputDebugString(("[BNN] Conta '%s' criada | Banco: %d | Player: %d | Tipo: %s"):format(
-            accountNumber, data.bank_id, data.player_id, accType))
+            accountNumber, data.bank_id, data.player_id, accType)) -- debug
 
         if data.callback then data.callback(true, newAcc) end
 
@@ -195,11 +195,19 @@ end
 
 --  log transactions type: "deposit" | "withdrawal" | "transfer" | "fee" | "loan"
 function Account:logTransaction(txType, amount, fee, counterpartNumber)
-    dbExec(db,
-        "INSERT INTO bank_transactions (origin_account, destiny_account, amount, tax, type) VALUES (?, ?, ?, ?, ?)",
-        self.accountNumber,
-        counterpartNumber or self.accountNumber,
-        amount, fee, txType)
+    transactionBuffer[#transactionBuffer + 1] = {
+        origin    = self.accountNumber,
+        destiny   = counterpartNumber or self.accountNumber,
+        amount    = amount,
+        fee       = fee,
+        txType    = txType,
+        timestamp = os.time()
+    }
+
+    -- Flush antecipado se o volume estiver alto
+    if #transactionBuffer >= TX_BATCH_LIMIT then
+        flushTransactionBuffer()
+    end
 end
 
 function Account:freeze()

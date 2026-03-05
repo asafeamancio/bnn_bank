@@ -106,8 +106,8 @@ addCommandHandler("bnncache", function(player)
     local countA = 0
     for num, acc in pairs(accountsCache) do
         countA = countA + 1
-        printINFO(player, ("[%s] Player: %d | Saldo: R$%.2f | Score: %d | Status: %s | Dirty: %s")
-            :format(num, acc.playerID, acc.balance, acc.score, acc.status, tostring(acc.isDirty)))
+        printINFO(player, ("[%s] Player: %d | Saldo: R$%.2f | Score: %d | Status: %s | Tipo: %s | Dirty: %s")
+            :format(num, acc.playerID, acc.balance, acc.score, acc.status, acc.type, tostring(acc.isDirty)))
     end
     if countA == 0 then printINFO(player, "(nenhuma conta em cache)") end
 end)

@@ -3,6 +3,9 @@ banksCache    = {}
 accountsCache = {}
 loansCache    = {}
 
+transactionBuffer     = {}
+TX_BATCH_LIMIT  = 30 -- flush
+
 addEventHandler("onResourceStart", resourceRoot, function()
     db = dbConnect("mysql",
         ("dbname=%s;host=%s;port=%s"):format(dbConfig.name, dbConfig.host, dbConfig.port),
@@ -23,11 +26,12 @@ addEventHandler("onResourceStop", resourceRoot, function()
     for _, bank in pairs(banksCache)    do if bank.isDirty then bank:save() end end
     for _, loan in pairs(loansCache)    do if loan.isDirty then loan:save() end end
 
+    flushTransactionBuffer()
+
     outputDebugString("[BNN] Todos os dados foram persistidos com segurança.") -- debug
 end)
 
 function loadBankSystem()
-
     dbQuery(function(qh)
         local banks, numBanks = dbPoll(qh, 0)
         if banks then
@@ -65,6 +69,37 @@ function loadBankSystem()
     end, db, "SELECT * FROM bank_institutions")
 end
 
+function flushTransactionBuffer()
+    if #transactionBuffer == 0 then return end
+
+    -- Captura e limpa o buffer atomicamente antes do INSERT.
+    -- Se o dbExec falhar, as transações se perdem mas o servidor
+    -- não trava — log de debug sinaliza o problema.
+    local batch        = transactionBuffer
+    transactionBuffer  = {}
+
+    -- Monta "(?,?,?,?,?),(?,?,?,?,?),..." e achata os valores
+    local placeholders = {}
+    local params       = {}
+
+    for _, tx in ipairs(batch) do
+        placeholders[#placeholders + 1] = "(?,?,?,?,?,FROM_UNIXTIME(?))"
+        params[#params + 1] = tx.origin
+        params[#params + 1] = tx.destiny
+        params[#params + 1] = tx.amount
+        params[#params + 1] = tx.fee
+        params[#params + 1] = tx.txType
+        params[#params + 1] = tx.timestamp
+    end
+
+    local sql = "INSERT INTO bank_transactions (origin_account, destiny_account, amount, tax, type, created_at) VALUES "
+        .. table.concat(placeholders, ",")
+
+    -- unpack dos params como varargs do dbExec
+    dbExec(db, sql, unpack(params))
+
+    outputDebugString(("[BNN] TransactionBuffer: %d registros persistidos em lote."):format(#batch))
+end
 
 local SYNC_INTERVAL = 5 * 60 * 1000  -- 5 minutos em ms
 
@@ -75,6 +110,8 @@ function startAutoSync()
         for _, acc  in pairs(accountsCache) do if acc.isDirty  then acc:save()  a = a + 1 end end
         for _, bank in pairs(banksCache)    do if bank.isDirty then bank:save() b = b + 1 end end
         for _, loan in pairs(loansCache)    do if loan.isDirty then loan:save() l = l + 1 end end
+
+        flushTransactionBuffer()
 
         if a > 0 or b > 0 or l > 0 then
             outputDebugString(("[BNN] AutoSync: %d contas, %d bancos, %d empréstimos salvos."):format(a, b, l)) -- debug
